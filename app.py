@@ -10,25 +10,29 @@ CORS(app)
 def search():
     query = request.args.get("q")
     if not query:
-        return jsonify({"error": "Missing query"}), 400
+        return jsonify({"error": "Missing search"}), 400
 
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
     url = f"https://www.aliexpress.com/wholesale?SearchText={query}"
     res = requests.get(url, headers=headers)
 
     soup = BeautifulSoup(res.text, "html.parser")
-    products = []
+    
+    # Updated simple fallback product cards selector
+    items = soup.find_all("a", class_="search-card-item")
+    results = []
 
-    for item in soup.select(".manhattan--container")[:10]:
-        title = item.select_one(".manhattan--titleText")
-        image = item.select_one("img")
-        if title and image:
-            products.append({
-                "title": title.text.strip(),
-                "image": image["src"] if "src" in image.attrs else "",
-            })
+    for item in items[:10]:
+        title = item.get("title") or "No title"
+        image_tag = item.find("img")
+        image = image_tag["src"] if image_tag and image_tag.get("src") else ""
+        results.append({
+            "title": title,
+            "image": image
+        })
 
-    return jsonify(products)
-
+    return jsonify(results)
 if __name__ == "__main__":
     app.run()
